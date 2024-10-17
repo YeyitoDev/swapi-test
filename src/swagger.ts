@@ -1,18 +1,21 @@
 // src/swagger.ts
 
 import { Options } from 'swagger-jsdoc';
+import dotenv from 'dotenv';
+
+const port = process.env.PORT || 3000;
 
 const swaggerOptions: Options = {
   definition: {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: {
       title: 'API Documentation',
-      version: '1.0.0',
+      version: '2.0.0',
       description: 'API documentation for Swapi test ',
     },
     servers: [
       {
-        url: 'http://localhost:3000', // Replace with your server URL
+        url: `http://localhost:${port}`, // Replace with your server URL
       },
     ],
   },

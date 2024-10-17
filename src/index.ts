@@ -3,6 +3,7 @@
 import express, { Request, Response } from 'express';
 import axios from 'axios';
 import AWS from 'aws-sdk';
+import cors from 'cors';
 // import { translateWithDictionary } from './translate'; // Adjust path if necessary
 
 require('dotenv').config();
@@ -15,6 +16,7 @@ import swaggerOptions from './swagger'; // Adjust path if necessary
 
 
 
+const URL = process.env.URL || "NO URL"
 
 
 // var AWS = require('aws-sdk');
@@ -200,12 +202,48 @@ async function getPersonajesUnicos() {
     return translatedData;
   };
 
-////////////////////////apis
-////////////////////////////////////////////////
+
+  // Funcion - API ROOT - GET
+const get_api_endpoints = async (): Promise<any> => {
+  try {
+    const response = await axios.get(`https://swapi.py4e.com/api/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error; // Lanza el error para que se pueda manejar en el bloque catch
+  }
+};
+
+
+
+const get_persona_data = async (persona_id: number): Promise<any> => {
+  try {
+    const response = await axios.get(`https://swapi.py4e.com/api/people/${persona_id}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error; // Lanza el error para que se pueda manejar en el bloque catch
+  }
+};
+
+
+// Función - Api films - GET
+const get_film_data = async (film_id: number): Promise<any> => {
+  try {
+    const response = await axios.get(`https://swapi.py4e.com/api/films/${film_id}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error; // Lanza el error para que se pueda manejar en el bloque catch
+  }
+};
+
+
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Middleware 
+app.use(cors());
 app.use(express.json());
 
 // Swagger setup
@@ -225,46 +263,70 @@ app.post('/api/data', (req: Request, res: Response) => {
   res.json({ received: data });
 });
 
-// Funcion - API ROOT - GET
-const get_api_endpoints = async (): Promise<any> => {
-    try {
-      const response = await axios.get(`https://swapi.py4e.com/api/`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      throw error; // Lanza el error para que se pueda manejar en el bloque catch
-    }
-  };
 
-
-
-const get_persona_data = async (persona_id: number): Promise<any> => {
-    try {
-      const response = await axios.get(`https://swapi.py4e.com/api/people/${persona_id}/`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      throw error; // Lanza el error para que se pueda manejar en el bloque catch
-    }
-  };
-  
-
-// Función - Api films - GET
-const get_film_data = async (film_id: number): Promise<any> => {
-    try {
-      const response = await axios.get(`https://swapi.py4e.com/api/films/${film_id}/`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      throw error; // Lanza el error para que se pueda manejar en el bloque catch
-    }
-  };
-
-
+/**
+ * @swagger
+ * /personaje_unico:
+ *   post:
+ *     summary: Insertar un nuevo personaje en la base de datos
+ *     description: Inserta los detalles de un nuevo personaje en la base de datos.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre_unico:
+ *                 type: string
+ *                 example: "Yeyo7"
+ *               altura:
+ *                 type: integer
+ *                 example: 180
+ *               color_de_cabello:
+ *                 type: string
+ *                 example: "negro"
+ *               color_de_piel:
+ *                 type: string
+ *                 example: "trigueño"
+ *               color_de_ojos:
+ *                 type: string
+ *                 example: "marrones"
+ *               año_de_nacimiento:
+ *                 type: integer
+ *                 example: 2000
+ *               género:
+ *                 type: string
+ *                 example: "masculino"
+ *               mundo_natal:
+ *                 type: string
+ *                 example: "planeta tierra"
+ *               color_sable_luz:
+ *                 type: string
+ *                 example: "naranja"
+ *               nave_estelar:
+ *                 type: string
+ *                 example: "space-ye"
+ *     responses:
+ *       200:
+ *         description: Personaje insertado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Personaje insertado exitosamente"
+ *       400:
+ *         description: Solicitud incorrecta o datos faltantes
+ *       500:
+ *         description: Error interno del servidor
+ */
 
 
 // API: Personaje único - POST
-app.post('/insert', async (req: Request, res: Response) => {
+app.post('/personaje_unico', async (req: Request, res: Response): Promise<Response | any> => {
     const {
         nombre_unico,
         altura,
@@ -307,7 +369,7 @@ app.post('/insert', async (req: Request, res: Response) => {
 
 
   // API: Root - GET
-app.get('/raiz', async (req: Request, res: Response) => {
+app.get('/raiz', async (req: Request, res: Response): Promise<Response | any> => {
 
     const apiResponse = await get_api_endpoints();
     const translate_apiResponse = await translateWithDictionary(apiResponse);
@@ -318,55 +380,74 @@ app.get('/raiz', async (req: Request, res: Response) => {
 
 // Función - Api people - GET
 /**
- * @swagger
- * /persona/{id}:
- *   get:
- *     summary: Retrieve a person by ID
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: Numeric ID of the person to get
- *     responses:
- *       200:
- *         description: A person data
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 name:
- *                   type: string
- *                 height:
- *                   type: string
- *       400:
- *         description: Invalid ID supplied
- *       404:
- *         description: Person not found
+* @swagger
+* /persona/{id}:
+*   get:
+*     summary: Obtener información de una persona por ID
+*     parameters:
+*       - in: path
+*         name: id
+*         schema:
+*           type: integer
+*         required: true
+*         description: ID numérico de la persona a obtener
+*     responses:
+*       200:
+*         description: Datos de la persona
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 nombre:
+*                   type: string
+*                 altura:
+*                   type: string
+*                 masa:
+*                   type: string
+*                 color_de_cabello:
+*                   type: string
+*                 color_de_piel:
+*                   type: string
+*                 color_de_ojos:
+*                   type: string
+*                 año_de_nacimiento:
+*                   type: string
+*                 género:
+*                   type: string
+*                 mundo_natal:
+*                   type: string
+*                 películas:
+*                   type: array
+*                   items:
+*                     type: string
+*                 especies:
+*                   type: array
+*                   items:
+*                     type: string
+*                 vehículos:
+*                   type: array
+*                   items:
+*                     type: string
+*                 naves_estelares:
+*                   type: array
+*                   items:
+*                     type: string
+*                 creado:
+*                   type: string
+*                 editado:
+*                   type: string
+*                 url:
+*                   type: string
+*       400:
+*         description: ID inválido
+*       404:
+*         description: Persona no encontrada
+*       500:
+*         description: Error interno del servidor
  */
-// Ruta GET que recibe un parámetro id y se asegura de que sea un entero
-// app.get('/persona/:id', async (req: Request, res: Response): Promise<Response> => {
-//     // Convertir el parámetro "id" a número entero
-//     const persona_id = parseInt(req.params.id, 10);
-  
-//     // Validar si el parámetro no es un número
-//     if (isNaN(persona_id)) {
-//       return res.status(400).send('El ID debe ser un número entero.');
-//     }
-  
-//     try {
-//       // Llamar a la API con el id entero
-//       const apiResponse = await get_persona_data(persona_id);
-//       const translate_apiResponse = await translateWithDictionary(apiResponse);
 
-//       res.json(translate_apiResponse); // Enviar la respuesta de la API como JSON
-//     // res.json(apiResponse);
-//     } catch (error) {
-//       res.status(500).send('Hubo un error al obtener los datos del personaje.');
-//     }
-//   });
+
 
 // Ruta GET que recibe un parámetro id y se asegura de que sea un entero
 app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | any> => {
@@ -392,6 +473,86 @@ app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | 
 });
 
 
+
+
+/**
+ * @swagger
+ * /pelicula/{id}:
+ *   get:
+ *     summary: Obtener información de una película por ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID numérico de la película a obtener
+ *     responses:
+ *       200:
+ *         description: Datos de la película
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 titulo:
+ *                   type: string
+ *                   example: "Star Wars: Episode IV - A New Hope"
+ *                 director:
+ *                   type: string
+ *                   example: "George Lucas"
+ *                 productor:
+ *                   type: string
+ *                   example: "Gary Kurtz, George Lucas"
+ *                 año_de_lanzamiento:
+ *                   type: string
+ *                   example: "1977"
+ *                 personajes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     example: "Luke Skywalker"
+ *                 especies:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     example: "Human"
+ *                 planetas:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     example: "Tatooine"
+ *                 naves_estelares:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     example: "Millennium Falcon"
+ *                 películas:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     example: "Star Wars: Episode V - The Empire Strikes Back"
+ *                 creado:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2014-12-12T11:12:24.144000Z"
+ *                 editado:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2014-12-20T21:17:56.891000Z"
+ *                 url:
+ *                   type: string
+ *                   format: uri
+ *                   example: "https://swapi.py4e.com/api/films/1/"
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Película no encontrada
+ *       500:
+ *         description: Error interno del servidor
+ */
+
+
   app.get('/pelicula/:id', async (req: Request, res: Response): Promise<Response | any> => {
     // Convertir el parámetro "id" a número entero
     const film_id = parseInt(req.params.id, 10);
@@ -414,8 +575,71 @@ app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | 
   });
 
 
+  /**
+ * @swagger
+ * /get_personajes_unicos/:
+ *   get:
+ *     summary: Obtener lista de personajes únicos
+ *     description: Devuelve una lista de personajes únicos con sus atributos detallados.
+ *     responses:
+ *       200:
+ *         description: Lista de personajes obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   nombre_unico:
+ *                     type: string
+ *                     example: "Yeyo2"
+ *                   color_de_ojos:
+ *                     type: string
+ *                     example: "marrones"
+ *                   color_sable_luz:
+ *                     type: string
+ *                     example: "naranja"
+ *                   género:
+ *                     type: string
+ *                     example: "masculino"
+ *                   color_de_piel:
+ *                     type: string
+ *                     example: "trigueño"
+ *                   mundo_natal:
+ *                     type: string
+ *                     example: "planeta tierra"
+ *                   año_de_nacimiento:
+ *                     type: integer
+ *                     example: 2000
+ *                   altura:
+ *                     type: integer
+ *                     example: 180
+ *                   editado:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2024-10-15T16:54:45.734Z"
+ *                   creado:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2024-10-15T16:54:45.734Z"
+ *                   nave_estelar:
+ *                     type: string
+ *                     example: "space-ye"
+ *                   color_de_cabello:
+ *                     type: string
+ *                     example: "negro"
+ *       400:
+ *         description: Solicitud incorrecta
+ *       404:
+ *         description: Personajes no encontrados
+ *       500:
+ *         description: Error interno del servidor
+ */
+
+
   // API: Obtener todos los personajes unicos - GET
-app.get('/get_personajes_unicos/', async (req: Request, res: Response) => {
+app.get('/get_personajes_unicos/', async (req: Request, res: Response): Promise<Response | any> => {
   const { nombre_unico } = req.params;
 
   try {
@@ -435,9 +659,82 @@ app.get('/get_personajes_unicos/', async (req: Request, res: Response) => {
 });
 
 
+/**
+ * @swagger
+ * /get_personaje_unico/{nombre_unico}:
+ *   get:
+ *     summary: Obtener un personaje único por su nombre
+ *     description: Devuelve los detalles de un personaje único basado en el nombre especificado.
+ *     parameters:
+ *       - in: path
+ *         name: nombre_unico
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Nombre único del personaje a obtener
+ *     responses:
+ *       200:
+ *         description: Datos del personaje obtenidos exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 nombre_unico:
+ *                   type: string
+ *                   example: "Yeyo2"
+ *                 color_de_ojos:
+ *                   type: string
+ *                   example: "marrones"
+ *                 color_sable_luz:
+ *                   type: string
+ *                   example: "naranja"
+ *                 género:
+ *                   type: string
+ *                   example: "masculino"
+ *                 color_de_piel:
+ *                   type: string
+ *                   example: "trigueño"
+ *                 mundo_natal:
+ *                   type: string
+ *                   example: "planeta tierra"
+ *                 año_de_nacimiento:
+ *                   type: integer
+ *                   example: 2000
+ *                 altura:
+ *                   type: integer
+ *                   example: 180
+ *                 editado:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2024-10-15T16:54:45.734Z"
+ *                 creado:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2024-10-15T16:54:45.734Z"
+ *                 nave_estelar:
+ *                   type: string
+ *                   example: "space-ye"
+ *                 color_de_cabello:
+ *                   type: string
+ *                   example: "negro"
+ *       400:
+ *         description: Solicitud incorrecta o parámetro inválido
+ *       404:
+ *         description: Personaje no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+
+
   // API: Obtener personaje único - GET
-  app.get('/get_personaje_unico/:nombre_unico', async (req: Request, res: Response) => {
+  app.get('/get_personaje_unico/:nombre_unico', async (req: Request, res: Response): Promise<Response | any> => {
     const { nombre_unico } = req.params;
+
+    if (!nombre_unico || typeof nombre_unico !== 'string') {
+      return res.status(400).json({ message: "El campo nombre_unico es obligatorio y debe ser una cadena." });
+  }
+  
   
     try {
         const result = await getDataByNombreUnico(nombre_unico);
@@ -455,7 +752,9 @@ app.get('/get_personajes_unicos/', async (req: Request, res: Response) => {
   }
   });
   
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${port}`);
+  // 
+  
+  app.listen(port, () => {
+    console.log(`Servidor corriendo en ${URL}`);
   });
   

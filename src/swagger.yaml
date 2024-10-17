@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: OpenAPI Bug Test
+  description: OpenAPI specification Test in GitLab
+  contact:
+    name: Test
+    url: http://www.test.com/
+    email: test@domain.tld
+  license:
+    name: Proprietary
+  version: '1.0'
+servers:
+  - url: http://localhost:3000
+    description: Test Server
+paths:
+  "/api-docs":
+    get:
+      summary: Retrieve information
+      description: Some REST operation that retrieves information.
+      operationId: getSomething
+      tags:
+        - Test
+      responses:
+        '204':
+          description: Indicates that the request was successful, but there is no content to return.
+        '500':
+          description: Indicates that an internal server error occurred.
+        '400':
+          description: Indicates that the request was malformed or invalid.
