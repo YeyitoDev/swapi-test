@@ -21,4 +21,4 @@ CMD ["npm", "start"]
 
 
 # Expose the port the app runs on (e.g., 3000)
-EXPOSE 3000
+# EXPOSE 3000

@@ -1,10 +1,15 @@
 // src/index.ts
 
 import express, { Request, Response } from 'express';
+import serverless from 'serverless-http'; 
+
 import axios from 'axios';
 import AWS from 'aws-sdk';
 import cors from 'cors';
 // import { translateWithDictionary } from './translate'; // Adjust path if necessary
+
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+
 
 require('dotenv').config();
 
@@ -12,11 +17,8 @@ require('dotenv').config();
 // import swaggerUi from 'swagger-ui-express';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerOptions from './swagger'; // Adjust path if necessary
-
-
-
-const URL = process.env.URL || "NO URL"
+import swaggerOptions from './swagger'; // Ensure correct extension
+ // Adjust path if necessary
 
 
 // var AWS = require('aws-sdk');
@@ -131,7 +133,7 @@ async function getPersonajesUnicos() {
 ) {
     const currentTime = new Date().toISOString();
 
-    const table_name = process.env.TABLE_NAME || 'defaultTableName'; // Valor por defecto
+     // Valor por defecto
 
 
     // Primero verifica si el ítem ya existe
@@ -143,7 +145,10 @@ async function getPersonajesUnicos() {
     };
 
     try {
+      console.log(getParams);
+
         const data = await dynamoDB.get(getParams).promise(); // Busca el ítem
+
         if (data.Item) {
             // Si el ítem ya existe
             throw new Error('El personaje ya existe con el nombre único: ' + nombre_unico);
@@ -240,15 +245,41 @@ const get_film_data = async (film_id: number): Promise<any> => {
 
 
 const app = express();
-const port = process.env.PORT || 3000;
+
 
 // Middleware 
 app.use(cors());
 app.use(express.json());
 
 // Swagger setup
+// const swaggerSpec = swaggerJsdoc(swaggerOptions);
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Handler to return Swagger JSON spec
+export const getApiDocsHandler = async (event: any) => {
+  try {
+    // Return Swagger specification as JSON
+    return {
+      statusCode: 200,
+      body: JSON.stringify(swaggerSpec), // Return the Swagger JSON specification
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: `Error retrieving API documentation: ${errorMessage}` }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+  }
+};
 
 
 // Route example
@@ -325,47 +356,96 @@ app.post('/api/data', (req: Request, res: Response) => {
  */
 
 
-// API: Personaje único - POST
-app.post('/personaje_unico', async (req: Request, res: Response): Promise<Response | any> => {
-    const {
-        nombre_unico,
-        altura,
-        color_de_cabello,
-        color_de_piel,
-        color_de_ojos,
-        año_de_nacimiento,
-        género,
-        mundo_natal,
-        color_sable_luz,
-        nave_estelar,
-    } = req.body;
+// // API: Personaje único - POST
+// app.post('/personaje_unico', async (req: Request, res: Response): Promise<Response | any> => {
+//     const {
+//         nombre_unico,
+//         altura,
+//         color_de_cabello,
+//         color_de_piel,
+//         color_de_ojos,
+//         año_de_nacimiento,
+//         género,
+//         mundo_natal,
+//         color_sable_luz,
+//         nave_estelar,
+//     } = req.body;
 
-    try {
-        const result = await insertDataintoDatabase(
-            nombre_unico,
-            altura,
-            color_de_cabello,
-            color_de_piel,
-            color_de_ojos,
-            año_de_nacimiento,
-            género,
-            mundo_natal,
-            color_sable_luz,
-            nave_estelar
-        );
-        res.status(200).json({ message: result }); // Mensaje de éxito
-    } catch (err) {
-      if (err instanceof Error) {
-          // Si err es una instancia de Error, accede a su propiedad message
-          console.error("Error", err.message);
-          throw new Error('Error al obtener los datos: ' + err.message);
-      } else {
-          // Si err no es una instancia de Error, lanza un mensaje genérico
-          console.error("Error desconocido", err);
-          throw new Error('Error desconocido al obtener los datos.');
-      }
+//     try {
+//         const result = await insertDataintoDatabase(
+//             nombre_unico,
+//             altura,
+//             color_de_cabello,
+//             color_de_piel,
+//             color_de_ojos,
+//             año_de_nacimiento,
+//             género,
+//             mundo_natal,
+//             color_sable_luz,
+//             nave_estelar
+//         );
+//         res.status(200).json({ message: result }); // Mensaje de éxito
+//     } catch (err) {
+//       if (err instanceof Error) {
+//           // Si err es una instancia de Error, accede a su propiedad message
+//           console.error("Error", err.message);
+//           throw new Error('Error al obtener los datos: ' + err.message);
+//       } else {
+//           // Si err no es una instancia de Error, lanza un mensaje genérico
+//           console.error("Error desconocido", err);
+//           throw new Error('Error desconocido al obtener los datos.');
+//       }
+//   }
+// });
+export const personajeUnicoHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
+    console.log(event.body);
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ message: "El cuerpo de la solicitud no puede estar vacío." }),
+      };
+    }
+
+    const {
+      nombre_unico,
+      altura,
+      color_de_cabello,
+      color_de_piel,
+      color_de_ojos,
+      año_de_nacimiento,
+      género,
+      mundo_natal,
+      color_sable_luz,
+      nave_estelar,
+    } = JSON.parse(event.body);
+
+    const result = await insertDataintoDatabase(
+      nombre_unico,
+      altura,
+      color_de_cabello,
+      color_de_piel,
+      color_de_ojos,
+      año_de_nacimiento,
+      género,
+      mundo_natal,
+      color_sable_luz,
+      nave_estelar
+    );
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: result }),
+    };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Error al obtener los datos: " + errorMessage }),
+    };
   }
-});
+};
 
 
   // API: Root - GET
@@ -449,28 +529,58 @@ app.get('/raiz', async (req: Request, res: Response): Promise<Response | any> =>
 
 
 
-// Ruta GET que recibe un parámetro id y se asegura de que sea un entero
-app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | any> => {
-  // Convertir el parámetro "id" a número entero
-  const persona_id = parseInt(req.params.id, 10);
+// // Ruta GET que recibe un parámetro id y se asegura de que sea un entero
+// app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | any> => {
+//   // Convertir el parámetro "id" a número entero
+//   const persona_id = parseInt(req.params.id, 10);
 
-  // Validar si el parámetro no es un número
-  if (isNaN(persona_id)) {
-      return res.status(400).send('El ID debe ser un número entero.');
+//   // Validar si el parámetro no es un número
+//   if (isNaN(persona_id)) {
+//       return res.status(400).send('El ID debe ser un número entero.');
+//   }
+
+//   try {
+//       // Llamar a la API con el id entero
+//       const apiResponse = await get_persona_data(persona_id);
+//       const translate_apiResponse = await translateWithDictionary(apiResponse);
+
+//       // Enviar la respuesta de la API traducida como JSON
+//       return res.json(translate_apiResponse);
+//   } catch (error) {
+//       console.error("Error al obtener los datos del personaje:", error);
+//       return res.status(500).send('Hubo un error al obtener los datos del personaje.');
+//   }
+// });
+
+export const getPersonaHandler = async (event: any) => {
+  const persona_id =  parseInt(event.pathParameters.id, 10);
+  
+
+  if (!persona_id || typeof persona_id !== 'number') {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "El campo nombre_unico es obligatorio y debe ser un entero." })
+    };
   }
 
   try {
-      // Llamar a la API con el id entero
-      const apiResponse = await get_persona_data(persona_id);
-      const translate_apiResponse = await translateWithDictionary(apiResponse);
+    const apiResponse = await get_persona_data(persona_id);
+    const translate_apiResponse = await translateWithDictionary(apiResponse);
 
-      // Enviar la respuesta de la API traducida como JSON
-      return res.json(translate_apiResponse);
+    // res.json(translate_apiResponse); // Enviar la respuesta de la API como JSON
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify(translate_apiResponse)
+    };
   } catch (error) {
-      console.error("Error al obtener los datos del personaje:", error);
-      return res.status(500).send('Hubo un error al obtener los datos del personaje.');
+    console.error("Error al obtener los datos: ", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Hubo un error al obtener los datos del personaje.'})
+    };
   }
-});
+};
 
 
 
@@ -553,26 +663,56 @@ app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | 
  */
 
 
-  app.get('/pelicula/:id', async (req: Request, res: Response): Promise<Response | any> => {
-    // Convertir el parámetro "id" a número entero
-    const film_id = parseInt(req.params.id, 10);
+  // app.get('/pelicula/:id', async (req: Request, res: Response): Promise<Response | any> => {
+  //   // Convertir el parámetro "id" a número entero
+  //   const film_id = parseInt(req.params.id, 10);
   
-    // Validar si el parámetro no es un número
-    if (isNaN(film_id)) {
-      return res.status(400).send('El ID debe ser un número entero.');
+  //   // Validar si el parámetro no es un número
+  //   if (isNaN(film_id)) {
+  //     return res.status(400).send('El ID debe ser un número entero.');
+  //   }
+  
+  //   try {
+  //     // Llamar a la API con el id entero
+  //     const apiResponse = await get_film_data(film_id);
+  //     const translate_apiResponse = await translateWithDictionary(apiResponse);
+
+  //     res.json(translate_apiResponse); // Enviar la respuesta de la API como JSON
+  //   // res.json(apiResponse);
+  //   } catch (error) {
+  //     res.status(500).send('Hubo un error al obtener los datos de la película.');
+  //   }
+  // });
+
+  export const getPeliculaHandler = async (event: any) => {
+    const film_id =  parseInt(event.pathParameters.id, 10);
+    
+  
+    if (!film_id || typeof film_id !== 'number') {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ message: "El campo nombre_unico es obligatorio y debe ser un entero." })
+      };
     }
   
     try {
-      // Llamar a la API con el id entero
       const apiResponse = await get_film_data(film_id);
       const translate_apiResponse = await translateWithDictionary(apiResponse);
 
-      res.json(translate_apiResponse); // Enviar la respuesta de la API como JSON
-    // res.json(apiResponse);
+      // res.json(translate_apiResponse); // Enviar la respuesta de la API como JSON
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify(translate_apiResponse)
+      };
     } catch (error) {
-      res.status(500).send('Hubo un error al obtener los datos de la película.');
+      console.error("Error al obtener los datos: ", error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ message: 'Hubo un error al obtener los datos de la película.'})
+      };
     }
-  });
+  };
 
 
   /**
@@ -639,24 +779,50 @@ app.get('/persona/:id', async (req: Request, res: Response): Promise<Response | 
 
 
   // API: Obtener todos los personajes unicos - GET
-app.get('/get_personajes_unicos/', async (req: Request, res: Response): Promise<Response | any> => {
-  const { nombre_unico } = req.params;
+// app.get('/get_personajes_unicos/', async (req: Request, res: Response): Promise<Response | any> => {
+//   const { nombre_unico } = req.params;
+
+//   try {
+//       const result = await getPersonajesUnicos();
+//       res.status(200).json(result); // Devuelve los datos del personaje
+//   } catch (err) {
+//     if (err instanceof Error) {
+//         // Si err es una instancia de Error, accede a su propiedad message
+//         console.error("Error", err.message);
+//         throw new Error('Error al obtener los datos: ' + err.message);
+//     } else {
+//         // Si err no es una instancia de Error, lanza un mensaje genérico
+//         console.error("Error desconocido", err);
+//         throw new Error('Error desconocido al obtener los datos.');
+//     }
+// }
+// });
+
+// export const getPersonajeUnico = async (event: any) => {
+
+export const getPersonajesUnicosHandler = async (event: any) => {
+//   event: APIGatewayEvent
+// ): Promise<APIGatewayProxyResult> => {
 
   try {
-      const result = await getPersonajesUnicos();
-      res.status(200).json(result); // Devuelve los datos del personaje
+    // Assuming `getPersonajesUnicos` is a function that returns the required data.
+    const result = await getPersonajesUnicos();
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result),  // Send the result as a JSON response
+    };
   } catch (err) {
-    if (err instanceof Error) {
-        // Si err es una instancia de Error, accede a su propiedad message
-        console.error("Error", err.message);
-        throw new Error('Error al obtener los datos: ' + err.message);
-    } else {
-        // Si err no es una instancia de Error, lanza un mensaje genérico
-        console.error("Error desconocido", err);
-        throw new Error('Error desconocido al obtener los datos.');
-    }
-}
-});
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+
+    console.error("Error", errorMessage);
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Error al obtener los datos: " + errorMessage }),
+    };
+  }
+};
 
 
 /**
@@ -728,33 +894,63 @@ app.get('/get_personajes_unicos/', async (req: Request, res: Response): Promise<
 
 
   // API: Obtener personaje único - GET
-  app.get('/get_personaje_unico/:nombre_unico', async (req: Request, res: Response): Promise<Response | any> => {
-    const { nombre_unico } = req.params;
+  // app.get('/get_personaje_unico/:nombre_unico', async (req: Request, res: Response): Promise<Response | any> => {
+  //   const { nombre_unico } = req.params;
 
-    if (!nombre_unico || typeof nombre_unico !== 'string') {
-      return res.status(400).json({ message: "El campo nombre_unico es obligatorio y debe ser una cadena." });
-  }
+  //   if (!nombre_unico || typeof nombre_unico !== 'string') {
+  //     return res.status(400).json({ message: "El campo nombre_unico es obligatorio y debe ser una cadena." });
+  // }
   
+  
+  //   try {
+  //       const result = await getDataByNombreUnico(nombre_unico);
+  //       res.status(200).json(result); // Devuelve los datos del personaje
+  //   } catch (err) {
+  //     if (err instanceof Error) {
+  //         // Si err es una instancia de Error, accede a su propiedad message
+  //         console.error("Error", err.message);
+  //         throw new Error('Error al obtener los datos: ' + err.message);
+  //     } else {
+  //         // Si err no es una instancia de Error, lanza un mensaje genérico
+  //         console.error("Error desconocido", err);
+  //         throw new Error('Error desconocido al obtener los datos.');
+  //     }
+  // }
+  // });
+
+  export const getPersonajeUnicoHandler = async (event: any) => {
+    const nombre_unico = event.pathParameters.nombre_unico;
+  
+    if (!nombre_unico || typeof nombre_unico !== 'string') {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ message: "El campo nombre_unico es obligatorio y debe ser una cadena." })
+      };
+    }
   
     try {
-        const result = await getDataByNombreUnico(nombre_unico);
-        res.status(200).json(result); // Devuelve los datos del personaje
-    } catch (err) {
-      if (err instanceof Error) {
-          // Si err es una instancia de Error, accede a su propiedad message
-          console.error("Error", err.message);
-          throw new Error('Error al obtener los datos: ' + err.message);
-      } else {
-          // Si err no es una instancia de Error, lanza un mensaje genérico
-          console.error("Error desconocido", err);
-          throw new Error('Error desconocido al obtener los datos.');
-      }
-  }
-  });
+      const result = await getDataByNombreUnico(nombre_unico);
+      return {
+        statusCode: 200,
+        body: JSON.stringify(result)
+      };
+    } catch (error) {
+      console.error("Error al obtener los datos: ", error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ message: "Error al obtener los datos" })
+      };
+    }
+  };
+
+  module.exports.handler = serverless(app);
   
   // 
-  
-  app.listen(port, () => {
-    console.log(`Servidor corriendo en ${URL}`);
-  });
+  // Use environment variables for PORT and URL
+// const PORT = process.env.PORT || 3100;
+// const URL = `http://0.0.0.0:${PORT}`;
+
+//   app.listen(PORT, () => {
+//     console.log(`Servidor corriendo en ${URL}`);
+//   });
   

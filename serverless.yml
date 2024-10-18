@@ -1,0 +1,69 @@
+service: swapi-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+
+functions:
+  getPersonajeUnico:
+    handler: dist/index.getPersonajeUnicoHandler
+    events:
+      - http:
+          path: get_personaje_unico/{nombre_unico}
+          method: get
+
+  getPersonajesUnicos:
+    handler: dist/index.getPersonajesUnicosHandler
+    events:
+      - http:
+          path: getPersonajesUnicos
+          method: get
+
+  getPelicula:
+    handler: dist/index.getPeliculaHandler
+    events:
+      - http:
+          path: getPelicula/{id}
+          method: get
+  
+  getPersona:
+    handler: dist/index.getPersonaHandler
+    events:
+      - http:
+          path: getPersona/{id}
+          method: get
+
+  postPersonajeUnico:
+    handler: dist/index.personajeUnicoHandler  # El handler que definimos en src/index.ts
+    events:
+      - http:
+          path: postPersonajeUnico  # El endpoint
+          method: post  # Es un método POST
+          cors: true  # Habilitar CORS si es necesario para el frontend
+
+  getApiDocs:
+    handler: dist/index.getApiDocsHandler  # El handler que definimos en src/index.ts
+    events:
+      - http:
+          path: api-docs  # El endpoint
+          method: get  # Es un método POST
+          cors: true  # Habilitar CORS si es necesario para el frontend
+
+
+plugins:
+  # - serverless-plugin-typescript
+  - serverless-offline
+
+package:
+  exclude:
+    # - node_modules/**
+    - src/**
+
+# custom:
+#   build:
+#     esbuild: false
+#     minify: true
+#     sourcemap: true
+#     target: 'node18'
+#     platform: 'node'

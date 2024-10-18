@@ -38,6 +38,8 @@ const translateWithDictionary = (data: Record<string, any>): Record<string, stri
   return translatedData;
 };
 
+export default translateWithDictionary;
+
 // Ejemplo de uso
 // const data = {
 //   name: 'John',

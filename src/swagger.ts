@@ -4,6 +4,7 @@ import { Options } from 'swagger-jsdoc';
 import dotenv from 'dotenv';
 
 const port = process.env.PORT || 3000;
+const URL = process.env.PORT || "NO URL"
 
 const swaggerOptions: Options = {
   definition: {
@@ -11,11 +12,11 @@ const swaggerOptions: Options = {
     info: {
       title: 'API Documentation',
       version: '2.0.0',
-      description: 'API documentation for Swapi test ',
+      description: 'API documentation for Swapi test',
     },
     servers: [
       {
-        url: `http://localhost:${port}`, // Replace with your server URL
+        url: `${URL}`, // Replace with your server URL
       },
     ],
   },
